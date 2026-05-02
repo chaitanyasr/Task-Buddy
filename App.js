@@ -71,7 +71,6 @@ export default function App() {
   const [taskPriority, setTaskPriority] = useState('med');
   const [taskFilter, setTaskFilter] = useState('all');
 
-  // Settings with AsyncStorage persistence
   const [email, setEmailState] = useState('');
   const [publicKey, setPublicKeyState] = useState('');
   const [serviceId, setServiceIdState] = useState('');
@@ -86,13 +85,13 @@ export default function App() {
         const pairs = await AsyncStorage.multiGet(keys);
         pairs.forEach(([key, val]) => {
           if (!val) return;
-          if (key==='email') setEmailState(val);
-          if (key==='publicKey') setPublicKeyState(val);
-          if (key==='serviceId') setServiceIdState(val);
-          if (key==='templateId') setTemplateIdState(val);
-          if (key==='sendTime') setSendTimeState(val);
+          if (key === 'email') setEmailState(val);
+          if (key === 'publicKey') setPublicKeyState(val);
+          if (key === 'serviceId') setServiceIdState(val);
+          if (key === 'templateId') setTemplateIdState(val);
+          if (key === 'sendTime') setSendTimeState(val);
         });
-      } catch(e) {}
+      } catch (e) {}
     }
     loadSettings();
   }, []);
@@ -106,19 +105,19 @@ export default function App() {
   function renderCalendar() {
     const first = new Date(viewYear, viewMonth, 1);
     const startDow = first.getDay();
-    const dim = new Date(viewYear, viewMonth+1, 0).getDate();
+    const dim = new Date(viewYear, viewMonth + 1, 0).getDate();
     const prevDays = new Date(viewYear, viewMonth, 0).getDate();
     const cells = [];
+
     DAYS.forEach(d => cells.push(
-      <View key={'h'+d} style={s.dayName}><Text style={s.dayNameTxt}>{d}</Text></View>
+      <View key={'h' + d} style={s.dayName}><Text style={s.dayNameTxt}>{d}</Text></View>
     ));
-    for (let i = startDow-1; i >= 0; i--)
-      cells.push(calCell(new Date(viewYear, viewMonth-1, prevDays-i), true));
-    for (let d = 1; d <= dim; d++)
-      cells.push(calCell(new Date(viewYear, viewMonth, d), false));
+
+    for (let i = startDow - 1; i >= 0; i--) cells.push(calCell(new Date(viewYear, viewMonth - 1, prevDays - i), true));
+    for (let d = 1; d <= dim; d++) cells.push(calCell(new Date(viewYear, viewMonth, d), false));
     const rem = (7 - (startDow + dim) % 7) % 7;
-    for (let d = 1; d <= rem; d++)
-      cells.push(calCell(new Date(viewYear, viewMonth+1, d), true));
+    for (let d = 1; d <= rem; d++) cells.push(calCell(new Date(viewYear, viewMonth + 1, d), true));
+
     return cells;
   }
 
@@ -128,15 +127,15 @@ export default function App() {
     const isSelected = key === selected;
     const hasEvents = events[key] && events[key].length > 0;
     return (
-      <TouchableOpacity key={key+(otherMonth?'o':'')} style={s.calCell} onPress={() => setSelected(key)}>
-        <View style={[s.calNum, isToday&&s.calNumToday, isSelected&&!isToday&&s.calNumSelected]}>
-          <Text style={[s.calNumTxt, otherMonth&&{color:C.textFaint}, isToday&&{color:'#fff'}, isSelected&&!isToday&&{color:C.primary}]}>
+      <TouchableOpacity key={key + (otherMonth ? 'o' : '')} style={s.calCell} onPress={() => setSelected(key)}>
+        <View style={[s.calNum, isToday && s.calNumToday, isSelected && !isToday && s.calNumSelected]}>
+          <Text style={[s.calNumTxt, otherMonth && { color: C.textFaint }, isToday && { color: '#fff' }, isSelected && !isToday && { color: C.primary }]}>
             {date.getDate()}
           </Text>
         </View>
         {hasEvents && (
           <View style={s.dotRow}>
-            {events[key].slice(0,3).map((e,i) => <View key={i} style={[s.dot,{backgroundColor:e.color}]}/>)}
+            {events[key].slice(0, 3).map((e, i) => <View key={i} style={[s.dot, { backgroundColor: e.color }]} />)}
           </View>
         )}
       </TouchableOpacity>
@@ -145,210 +144,218 @@ export default function App() {
 
   function saveEvent() {
     if (!evtTitle.trim()) return;
-    const updated = {...events};
+    const updated = { ...events };
     if (!updated[selected]) updated[selected] = [];
-    updated[selected] = [...updated[selected], {id:uid(),title:evtTitle.trim(),start:evtStart,end:evtEnd,color:evtColor}];
-    setEvents(updated); setEvtTitle(''); setShowEvtForm(false);
+    updated[selected] = [...updated[selected], { id: uid(), title: evtTitle.trim(), start: evtStart, end: evtEnd, color: evtColor }];
+    setEvents(updated);
+    setEvtTitle('');
+    setShowEvtForm(false);
   }
 
   function deleteEvent(id) {
-    const updated = {...events};
-    updated[selected] = (updated[selected]||[]).filter(e => e.id !== id);
+    const updated = { ...events };
+    updated[selected] = (updated[selected] || []).filter(e => e.id !== id);
     setEvents(updated);
   }
 
   function addTask() {
     if (!newTask.trim()) return;
-    setTasks([{id:uid(),text:newTask.trim(),done:false,priority:taskPriority,dueDate:todayKey(),carriedOver:false},...tasks]);
+    setTasks([{ id: uid(), text: newTask.trim(), done: false, priority: taskPriority, dueDate: todayKey(), carriedOver: false }, ...tasks]);
     setNewTask('');
   }
 
-  function toggleTask(id) { setTasks(tasks.map(t => t.id===id?{...t,done:!t.done}:t)); }
-  function deleteTask(id) { setTasks(tasks.filter(t => t.id!==id)); }
+  function toggleTask(id) { setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t)); }
+  function deleteTask(id) { setTasks(tasks.filter(t => t.id !== id)); }
 
   function filteredTasks() {
-    const base = [...tasks].sort((a,b) => {
-      if (a.done !== b.done) return a.done?1:-1;
-      return ({high:0,med:1,low:2}[a.priority])-({high:0,med:1,low:2}[b.priority]);
+    const base = [...tasks].sort((a, b) => {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      return ({ high: 0, med: 1, low: 2 }[a.priority]) - ({ high: 0, med: 1, low: 2 }[b.priority]);
     });
-    if (taskFilter==='today') return base.filter(t => t.dueDate===todayKey());
-    if (taskFilter==='pending') return base.filter(t => !t.done);
-    if (taskFilter==='done') return base.filter(t => t.done);
+    if (taskFilter === 'today') return base.filter(t => t.dueDate === todayKey());
+    if (taskFilter === 'pending') return base.filter(t => !t.done);
+    if (taskFilter === 'done') return base.filter(t => t.done);
     return base;
   }
 
-  const todayTasks = tasks.filter(t => t.dueDate===todayKey());
+  const todayTasks = tasks.filter(t => t.dueDate === todayKey());
   const doneTasks = todayTasks.filter(t => t.done);
-  const pct = todayTasks.length ? Math.round(doneTasks.length/todayTasks.length*100) : 0;
+  const pct = todayTasks.length ? Math.round(doneTasks.length / todayTasks.length * 100) : 0;
 
-  async function sendReport(isTest=false) {
+  async function sendReport(isTest = false) {
     if (!publicKey || !serviceId || !templateId || !email) {
-      Alert.alert('Missing Info','Please fill in all EmailJS settings first!'); return;
+      Alert.alert('Missing Info', 'Please fill in all EmailJS settings first!');
+      return;
     }
+
     const pending = todayTasks.filter(t => !t.done);
     const done = todayTasks.filter(t => t.done);
 
     if (autoCarry && !isTest) {
       const tmr = tomorrowKey();
-      const tmrTexts = tasks.filter(t => t.dueDate===tmr).map(t => t.text);
-      const carried = pending.filter(t => !tmrTexts.includes(t.text))
-        .map(t => ({...t,id:uid(),dueDate:tmr,carriedOver:true,done:false}));
-      if (carried.length) setTasks(prev => [...prev,...carried]);
+      const tmrTexts = tasks.filter(t => t.dueDate === tmr).map(t => t.text);
+      const carried = pending.filter(t => !tmrTexts.includes(t.text)).map(t => ({ ...t, id: uid(), dueDate: tmr, carriedOver: true, done: false }));
+      if (carried.length) setTasks(prev => [...prev, ...carried]);
     }
 
-    const dateStr = TODAY.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-    const subjectDateStr = TODAY.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+    const dateStr = TODAY.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const subjectDateStr = TODAY.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
-    let body = `\uD83D\uDDD3\uFE0F DayFlow \u2014 Daily Task Summary\n`;
-    body += `\uD83D\uDCC5 ${dateStr}\n`;
-    body += `${'\u2500'.repeat(40)}\n\n`;
-    body += `\uD83D\uDCCA PROGRESS: ${done.length}/${todayTasks.length} tasks completed (${pct}%)\n\n`;
+    let body = `Hi Buddy! 👋\n\n`;
+    body += `Here is the status of your tasks for today.\n`;
+    body += `📅 ${dateStr}\n`;
+    body += `${'─'.repeat(40)}\n\n`;
+    body += `📊 PROGRESS: ${done.length}/${todayTasks.length} tasks completed (${pct}%)\n\n`;
 
     if (done.length) {
-      body += `\u2705 COMPLETED (${done.length})\n`;
-      done.forEach(t => { body += `  \u2713 ${t.text} [${t.priority.toUpperCase()}]\n`; });
+      body += `✅ COMPLETED (${done.length})\n`;
+      done.forEach(t => { body += `  ✓ ${t.text} [${t.priority.toUpperCase()}]\n`; });
       body += '\n';
     }
+
     if (pending.length) {
-      body += `\u23F3 PENDING \u2014 ROLLING OVER TO TOMORROW (${pending.length})\n`;
-      pending.forEach(t => { body += `  \u2192 ${t.text} [${t.priority.toUpperCase()}]\n`; });
+      body += `⏳ PENDING — ROLLING OVER TO TOMORROW (${pending.length})\n`;
+      pending.forEach(t => { body += `  → ${t.text} [${t.priority.toUpperCase()}]\n`; });
       body += '\n';
     }
+
     if (!done.length && !pending.length) {
       body += `No tasks for today.\n\n`;
     }
-    body += `${'\u2500'.repeat(40)}\n`;
-    body += `Sent by DayFlow App \uD83D\uDCF1`;
+
+    body += `${'─'.repeat(40)}\n`;
+    body += `Keep going, you're doing great! 💪\n`;
+    body += `— Your Buddy 🤝`;
 
     const subject = isTest
-      ? `[TEST] DayFlow Daily Summary \u2014 ${subjectDateStr}`
-      : `DayFlow Daily Summary \u2014 ${subjectDateStr}`;
+      ? `[TEST] DayFlow Daily Summary — ${subjectDateStr}`
+      : `DayFlow Daily Summary — ${subjectDateStr}`;
 
     try {
       const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           service_id: serviceId,
           template_id: templateId,
           user_id: publicKey,
-          template_params: { to_email:email, subject, message:body, from_name:'DayFlow' },
+          template_params: { to_email: email, subject, message: body, from_name: 'DayFlow' },
         }),
       });
       const txt = await res.text();
-      if (res.ok) Alert.alert('\u2705 Sent!',`Report delivered to ${email}`);
-      else Alert.alert('\u274C Failed',`${res.status}: ${txt}`);
-    } catch(e) { Alert.alert('\u274C Error', e.message); }
+      if (res.ok) Alert.alert('✅ Sent!', `Report delivered to ${email}`);
+      else Alert.alert('❌ Failed', `${res.status}: ${txt}`);
+    } catch (e) {
+      Alert.alert('❌ Error', e.message);
+    }
   }
 
-  const prioStyle = p => p==='high'?{bg:C.errorLight,color:C.error}:p==='med'?{bg:C.warningLight,color:C.warning}:{bg:C.successLight,color:C.success};
+  const prioStyle = p => p === 'high' ? { bg: C.errorLight, color: C.error } : p === 'med' ? { bg: C.warningLight, color: C.warning } : { bg: C.successLight, color: C.success };
 
   return (
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.surface}/>
+      <StatusBar barStyle="dark-content" backgroundColor={C.surface} />
       <View style={s.topbar}>
-        <Text style={s.logo}>\uD83D\uDDD3 DayFlow</Text>
-        <Text style={s.todayTxt}>{TODAY.toLocaleDateString('en-IN',{weekday:'short',month:'short',day:'numeric'})}</Text>
+        <Text style={s.logo}>🗓 DayFlow</Text>
+        <Text style={s.todayTxt}>{TODAY.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
       </View>
 
-      <ScrollView style={{flex:1}} contentContainerStyle={{paddingBottom:80}} keyboardShouldPersistTaps="handled">
-
-        {tab==='calendar' && (
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 80 }} keyboardShouldPersistTaps="handled">
+        {tab === 'calendar' && (
           <View style={s.tabContent}>
             <View style={s.calHeader}>
-              <TouchableOpacity onPress={()=>{if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1);}}>
-                <Text style={s.navBtn}>&#8249;</Text>
+              <TouchableOpacity onPress={() => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); }}>
+                <Text style={s.navBtn}>‹</Text>
               </TouchableOpacity>
               <Text style={s.monthTitle}>{MONTHS[viewMonth]} {viewYear}</Text>
-              <TouchableOpacity onPress={()=>{if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1);}}>
-                <Text style={s.navBtn}>&#8250;</Text>
+              <TouchableOpacity onPress={() => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); }}>
+                <Text style={s.navBtn}>›</Text>
               </TouchableOpacity>
             </View>
             <View style={s.calGrid}>{renderCalendar()}</View>
             <View style={s.section}>
-              <Text style={s.sectionTitle}>{selected===todayKey()?`Today \u00B7 ${selected}`:selected}</Text>
-              {(events[selected]||[]).length===0 && <Text style={s.emptyTxt}>No events for this day</Text>}
-              {(events[selected]||[]).map(ev=>(
+              <Text style={s.sectionTitle}>{selected === todayKey() ? `Today · ${selected}` : selected}</Text>
+              {(events[selected] || []).length === 0 && <Text style={s.emptyTxt}>No events for this day</Text>}
+              {(events[selected] || []).map(ev => (
                 <View key={ev.id} style={s.eventCard}>
-                  <View style={[s.evtDot,{backgroundColor:ev.color}]}/>
-                  <View style={{flex:1}}>
+                  <View style={[s.evtDot, { backgroundColor: ev.color }]} />
+                  <View style={{ flex: 1 }}>
                     <Text style={s.evtTitle}>{ev.title}</Text>
-                    <Text style={s.evtTime}>{fmt12(ev.start)} \u2013 {fmt12(ev.end)}</Text>
+                    <Text style={s.evtTime}>{fmt12(ev.start)} – {fmt12(ev.end)}</Text>
                   </View>
-                  <TouchableOpacity onPress={()=>deleteEvent(ev.id)}><Text style={{color:C.textFaint,fontSize:18}}>\u00D7</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => deleteEvent(ev.id)}><Text style={{ color: C.textFaint, fontSize: 18 }}>×</Text></TouchableOpacity>
                 </View>
               ))}
-              {showEvtForm?(
+              {showEvtForm ? (
                 <View style={s.form}>
-                  <TextInput style={s.input} placeholder="Event title\u2026" placeholderTextColor={C.textMuted} value={evtTitle} onChangeText={setEvtTitle}/>
-                  <View style={{flexDirection:'row',gap:8}}>
-                    <TextInput style={[s.input,{flex:1}]} placeholder="Start 09:00" placeholderTextColor={C.textMuted} value={evtStart} onChangeText={setEvtStart}/>
-                    <TextInput style={[s.input,{flex:1}]} placeholder="End 10:00" placeholderTextColor={C.textMuted} value={evtEnd} onChangeText={setEvtEnd}/>
+                  <TextInput style={s.input} placeholder="Event title…" placeholderTextColor={C.textMuted} value={evtTitle} onChangeText={setEvtTitle} />
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TextInput style={[s.input, { flex: 1 }]} placeholder="Start 09:00" placeholderTextColor={C.textMuted} value={evtStart} onChangeText={setEvtStart} />
+                    <TextInput style={[s.input, { flex: 1 }]} placeholder="End 10:00" placeholderTextColor={C.textMuted} value={evtEnd} onChangeText={setEvtEnd} />
                   </View>
-                  <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>
-                    {EVENT_COLORS.map(c=><TouchableOpacity key={c} onPress={()=>setEvtColor(c)} style={[s.swatch,{backgroundColor:c},evtColor===c&&s.swatchActive]}/>)}
+                  <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                    {EVENT_COLORS.map(c => <TouchableOpacity key={c} onPress={() => setEvtColor(c)} style={[s.swatch, { backgroundColor: c }, evtColor === c && s.swatchActive]} />)}
                   </View>
-                  <View style={{flexDirection:'row',gap:8}}>
-                    <TouchableOpacity style={[s.btn,s.btnGhost,{flex:1}]} onPress={()=>setShowEvtForm(false)}><Text style={{color:C.textMuted}}>Cancel</Text></TouchableOpacity>
-                    <TouchableOpacity style={[s.btn,s.btnPrimary,{flex:1}]} onPress={saveEvent}><Text style={{color:'#fff',fontWeight:'700'}}>Save</Text></TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity style={[s.btn, s.btnGhost, { flex: 1 }]} onPress={() => setShowEvtForm(false)}><Text style={{ color: C.textMuted }}>Cancel</Text></TouchableOpacity>
+                    <TouchableOpacity style={[s.btn, s.btnPrimary, { flex: 1 }]} onPress={saveEvent}><Text style={{ color: '#fff', fontWeight: '700' }}>Save</Text></TouchableOpacity>
                   </View>
                 </View>
-              ):(
-                <TouchableOpacity style={s.addTrigger} onPress={()=>setShowEvtForm(true)}>
-                  <Text style={{color:C.primary,fontWeight:'600'}}>\uFF0B Add Event</Text>
+              ) : (
+                <TouchableOpacity style={s.addTrigger} onPress={() => setShowEvtForm(true)}>
+                  <Text style={{ color: C.primary, fontWeight: '600' }}>＋ Add Event</Text>
                 </TouchableOpacity>
               )}
             </View>
           </View>
         )}
 
-        {tab==='tasks' && (
+        {tab === 'tasks' && (
           <View style={s.tabContent}>
             <View style={s.progressCard}>
-              <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-                <Text style={{fontSize:13,color:C.textMuted}}>Today\u2019s progress</Text>
-                <Text style={{fontSize:13,color:C.primary,fontWeight:'700'}}>{pct}%</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ fontSize: 13, color: C.textMuted }}>Today's progress</Text>
+                <Text style={{ fontSize: 13, color: C.primary, fontWeight: '700' }}>{pct}%</Text>
               </View>
-              <View style={s.track}><View style={[s.fill,{width:`${pct}%`}]}/></View>
-              <Text style={{fontSize:12,color:C.textFaint}}>{doneTasks.length} of {todayTasks.length} done</Text>
+              <View style={s.track}><View style={[s.fill, { width: `${pct}%` }]} /></View>
+              <Text style={{ fontSize: 12, color: C.textFaint }}>{doneTasks.length} of {todayTasks.length} done</Text>
             </View>
             <View style={s.addCard}>
-              <TextInput style={s.input} placeholder="Add a new task\u2026" placeholderTextColor={C.textMuted}
-                value={newTask} onChangeText={setNewTask} onSubmitEditing={addTask} returnKeyType="done"/>
-              <View style={{flexDirection:'row',gap:6}}>
-                {['high','med','low'].map(p=>(
-                  <TouchableOpacity key={p} onPress={()=>setTaskPriority(p)} style={[s.prioBtn,taskPriority===p&&{backgroundColor:C.primary}]}>
-                    <Text style={{fontSize:11,fontWeight:'700',color:taskPriority===p?'#fff':C.textMuted}}>{p==='high'?'High':p==='med'?'Medium':'Low'}</Text>
+              <TextInput style={s.input} placeholder="Add a new task…" placeholderTextColor={C.textMuted} value={newTask} onChangeText={setNewTask} onSubmitEditing={addTask} returnKeyType="done" />
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {['high', 'med', 'low'].map(p => (
+                  <TouchableOpacity key={p} onPress={() => setTaskPriority(p)} style={[s.prioBtn, taskPriority === p && { backgroundColor: C.primary }]}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: taskPriority === p ? '#fff' : C.textMuted }}>{p === 'high' ? 'High' : p === 'med' ? 'Medium' : 'Low'}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-              <TouchableOpacity style={[s.btn,s.btnPrimary]} onPress={addTask}><Text style={{color:'#fff',fontWeight:'700'}}>\uFF0B Add Task</Text></TouchableOpacity>
+              <TouchableOpacity style={[s.btn, s.btnPrimary]} onPress={addTask}><Text style={{ color: '#fff', fontWeight: '700' }}>＋ Add Task</Text></TouchableOpacity>
             </View>
             <View style={s.filterRow}>
-              {['all','today','pending','done'].map(f=>(
-                <TouchableOpacity key={f} style={[s.filterTab,taskFilter===f&&s.filterTabActive]} onPress={()=>setTaskFilter(f)}>
-                  <Text style={[s.filterTxt,taskFilter===f&&{color:C.primary,fontWeight:'700'}]}>{f.charAt(0).toUpperCase()+f.slice(1)}</Text>
+              {['all', 'today', 'pending', 'done'].map(f => (
+                <TouchableOpacity key={f} style={[s.filterTab, taskFilter === f && s.filterTabActive]} onPress={() => setTaskFilter(f)}>
+                  <Text style={[s.filterTxt, taskFilter === f && { color: C.primary, fontWeight: '700' }]}>{f.charAt(0).toUpperCase() + f.slice(1)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <View style={{paddingHorizontal:16,gap:8}}>
-              {filteredTasks().length===0&&<Text style={s.emptyTxt}>No tasks here</Text>}
-              {filteredTasks().map(task=>{
-                const ps=prioStyle(task.priority);
-                return(
-                  <View key={task.id} style={[s.taskCard,task.done&&{opacity:0.55},task.carriedOver&&{borderLeftWidth:3,borderLeftColor:C.gold}]}>
-                    <TouchableOpacity onPress={()=>toggleTask(task.id)} style={[s.checkbox,task.done&&{backgroundColor:C.primary,borderColor:C.primary}]}>
-                      {task.done&&<Text style={{color:'#fff',fontSize:11,fontWeight:'700'}}>\u2713</Text>}
+            <View style={{ paddingHorizontal: 16, gap: 8 }}>
+              {filteredTasks().length === 0 && <Text style={s.emptyTxt}>No tasks here</Text>}
+              {filteredTasks().map(task => {
+                const ps = prioStyle(task.priority);
+                return (
+                  <View key={task.id} style={[s.taskCard, task.done && { opacity: 0.55 }, task.carriedOver && { borderLeftWidth: 3, borderLeftColor: C.gold }]}>
+                    <TouchableOpacity onPress={() => toggleTask(task.id)} style={[s.checkbox, task.done && { backgroundColor: C.primary, borderColor: C.primary }]}>
+                      {task.done && <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>✓</Text>}
                     </TouchableOpacity>
-                    <View style={{flex:1,gap:4}}>
-                      <Text style={[s.taskTxt,task.done&&{textDecorationLine:'line-through',color:C.textMuted}]}>{task.text}</Text>
-                      <View style={{flexDirection:'row',gap:6,flexWrap:'wrap'}}>
-                        {task.dueDate?<Text style={{fontSize:11,color:C.textMuted}}>{formatDue(task.dueDate)}</Text>:null}
-                        <View style={[s.badge,{backgroundColor:ps.bg}]}><Text style={[s.badgeTxt,{color:ps.color}]}>{task.priority==='high'?'High':task.priority==='med'?'Medium':'Low'}</Text></View>
-                        {task.carriedOver&&<View style={[s.badge,{backgroundColor:C.goldLight}]}><Text style={[s.badgeTxt,{color:C.gold}]}>Carried over</Text></View>}
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={[s.taskTxt, task.done && { textDecorationLine: 'line-through', color: C.textMuted }]}>{task.text}</Text>
+                      <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                        {task.dueDate ? <Text style={{ fontSize: 11, color: C.textMuted }}>{formatDue(task.dueDate)}</Text> : null}
+                        <View style={[s.badge, { backgroundColor: ps.bg }]}><Text style={[s.badgeTxt, { color: ps.color }]}>{task.priority === 'high' ? 'High' : task.priority === 'med' ? 'Medium' : 'Low'}</Text></View>
+                        {task.carriedOver && <View style={[s.badge, { backgroundColor: C.goldLight }]}><Text style={[s.badgeTxt, { color: C.gold }]}>Carried over</Text></View>}
                       </View>
                     </View>
-                    <TouchableOpacity onPress={()=>deleteTask(task.id)}><Text style={{color:C.textFaint,fontSize:18}}>\u00D7</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => deleteTask(task.id)}><Text style={{ color: C.textFaint, fontSize: 18 }}>×</Text></TouchableOpacity>
                   </View>
                 );
               })}
@@ -356,53 +363,52 @@ export default function App() {
           </View>
         )}
 
-        {tab==='settings' && (
+        {tab === 'settings' && (
           <View style={s.tabContent}>
             <View style={s.infoBox}>
-              <Text style={{color:C.primary,fontSize:13,lineHeight:20}}>
-                <Text style={{fontWeight:'700'}}>EmailJS Setup:</Text> Get free keys at emailjs.com \u2192 create a service + template with to_email, subject, message variables.
+              <Text style={{ color: C.primary, fontSize: 13, lineHeight: 20 }}>
+                <Text style={{ fontWeight: '700' }}>EmailJS Setup:</Text> Get free keys at emailjs.com → create a service + template with to_email, subject, message variables.
               </Text>
             </View>
             {[
-              {label:'Public Key',val:publicKey,set:setPublicKey,ph:'user_xxxxxxx'},
-              {label:'Service ID',val:serviceId,set:setServiceId,ph:'service_xxxxxxx'},
-              {label:'Template ID',val:templateId,set:setTemplateId,ph:'template_xxxxxxx'},
-              {label:'Your Email',val:email,set:setEmail,ph:'you@example.com'},
-              {label:'Daily Send Time',val:sendTime,set:setSendTime,ph:'21:00'},
-            ].map(f=>(
+              { label: 'Public Key', val: publicKey, set: setPublicKey, ph: 'user_xxxxxxx' },
+              { label: 'Service ID', val: serviceId, set: setServiceId, ph: 'service_xxxxxxx' },
+              { label: 'Template ID', val: templateId, set: setTemplateId, ph: 'template_xxxxxxx' },
+              { label: 'Your Email', val: email, set: setEmail, ph: 'you@example.com' },
+              { label: 'Daily Send Time', val: sendTime, set: setSendTime, ph: '21:00' },
+            ].map(f => (
               <View key={f.label} style={s.settingGroup}>
                 <Text style={s.settingLabel}>{f.label}</Text>
-                <TextInput style={s.input} value={f.val} onChangeText={f.set} placeholder={f.ph} placeholderTextColor={C.textMuted} autoCapitalize="none" autoCorrect={false}/>
+                <TextInput style={s.input} value={f.val} onChangeText={f.set} placeholder={f.ph} placeholderTextColor={C.textMuted} autoCapitalize="none" autoCorrect={false} />
               </View>
             ))}
             <View style={s.toggleRow}>
-              <Text style={{flex:1,fontSize:14,color:C.text}}>Auto carry-over pending tasks</Text>
-              <TouchableOpacity onPress={()=>setAutoCarry(!autoCarry)} style={[s.toggleTrack,autoCarry&&{backgroundColor:C.primary}]}>
-                <View style={[s.toggleKnob,autoCarry&&{transform:[{translateX:18}]}]}/>
+              <Text style={{ flex: 1, fontSize: 14, color: C.text }}>Auto carry-over pending tasks</Text>
+              <TouchableOpacity onPress={() => setAutoCarry(!autoCarry)} style={[s.toggleTrack, autoCarry && { backgroundColor: C.primary }]}>
+                <View style={[s.toggleKnob, autoCarry && { transform: [{ translateX: 18 }] }]} />
               </TouchableOpacity>
             </View>
-            <View style={{paddingHorizontal:16,gap:10}}>
-              <TouchableOpacity style={[s.btn,s.btnPrimary]} onPress={()=>sendReport(false)}>
-                <Text style={{color:'#fff',fontWeight:'700',fontSize:15}}>\uD83D\uDCE4 Send Daily Report Now</Text>
+            <View style={{ paddingHorizontal: 16, gap: 10 }}>
+              <TouchableOpacity style={[s.btn, s.btnPrimary]} onPress={() => sendReport(false)}>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>📤 Send Daily Report Now</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.btn,{borderWidth:2,borderColor:C.primary}]} onPress={()=>sendReport(true)}>
-                <Text style={{color:C.primary,fontWeight:'700'}}>\uD83E\uDDEA Send Test Email</Text>
+              <TouchableOpacity style={[s.btn, { borderWidth: 2, borderColor: C.primary }]} onPress={() => sendReport(true)}>
+                <Text style={{ color: C.primary, fontWeight: '700' }}>🧪 Send Test Email</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
-
       </ScrollView>
 
       <View style={s.tabBar}>
         {[
-          {key:'calendar',icon:'\uD83D\uDDD3',label:'Calendar'},
-          {key:'tasks',icon:'\u2705',label:'Tasks'},
-          {key:'settings',icon:'\u2699\uFE0F',label:'Settings'},
-        ].map(t=>(
-          <TouchableOpacity key={t.key} style={s.tabItem} onPress={()=>setTab(t.key)}>
-            <Text style={{fontSize:22}}>{t.icon}</Text>
-            <Text style={[s.tabLabel,tab===t.key&&{color:C.primary,fontWeight:'700'}]}>{t.label}</Text>
+          { key: 'calendar', icon: '🗓', label: 'Calendar' },
+          { key: 'tasks', icon: '✅', label: 'Tasks' },
+          { key: 'settings', icon: '⚙️', label: 'Settings' },
+        ].map(t => (
+          <TouchableOpacity key={t.key} style={s.tabItem} onPress={() => setTab(t.key)}>
+            <Text style={{ fontSize: 22 }}>{t.icon}</Text>
+            <Text style={[s.tabLabel, tab === t.key && { color: C.primary, fontWeight: '700' }]}>{t.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
