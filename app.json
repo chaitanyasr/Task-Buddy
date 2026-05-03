@@ -11,30 +11,20 @@
       "resizeMode": "contain",
       "backgroundColor": "#f7f6f2"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.chaitanyasr.taskbuddy"
-    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#f7f6f2"
       },
-      "package": "com.chaitanyasr.taskbuddy"
+      "package": "com.chaitanyasr.dayflow"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      [
-        "@react-native-async-storage/async-storage",
-        {
-          "exclude": []
-        }
-      ]
-    ]
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    }
   }
 }
