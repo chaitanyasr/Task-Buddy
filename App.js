@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, TextInput, SafeAreaView, StatusBar, Alert
+  ScrollView, TextInput, SafeAreaView, StatusBar, Alert, ActivityIndicator
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { db } from './firebaseConfig';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const TODAY = new Date();
 const MONTHS = ['January','February','March','April','May','June',
@@ -28,6 +30,9 @@ function formatDue(s) {
   if (!s) return '';
   const [y,mo,d] = s.split('-');
   return new Date(+y,+mo-1,+d).toLocaleDateString('en-IN',{month:'short',day:'numeric'});
+}
+function safeEmailKey(email) {
+  return email.toLowerCase().replace(/\./g, '_').replace(/@/g, '__at__');
 }
 
 const C = {
@@ -57,8 +62,10 @@ const SEED_EVENTS = {
 
 export default function App() {
   const [tab, setTab] = useState('calendar');
-  const [tasks, setTasks] = useState(SEED_TASKS);
-  const [events, setEvents] = useState(SEED_EVENTS);
+  const [tasks, setTasksState] = useState([]);
+  const [events, setEventsState] = useState({});
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [selected, setSelected] = useState(todayKey());
   const [viewYear, setViewYear] = useState(TODAY.getFullYear());
   const [viewMonth, setViewMonth] = useState(TODAY.getMonth());
@@ -78,29 +85,105 @@ export default function App() {
   const [sendTime, setSendTimeState] = useState('21:00');
   const [autoCarry, setAutoCarry] = useState(true);
 
+  // ─── Firestore helpers ───────────────────────────────────────────
+  async function loadFromFirestore(userEmail) {
+    try {
+      const key = safeEmailKey(userEmail);
+      const ref = doc(db, 'users', key);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.tasks) setTasksState(data.tasks);
+        if (data.events) setEventsState(data.events);
+        return true;
+      }
+    } catch (e) {
+      console.log('Firestore load error:', e);
+    }
+    return false;
+  }
+
+  async function saveToFirestore(userEmail, newTasks, newEvents) {
+    if (!userEmail) return;
+    try {
+      setSyncing(true);
+      const key = safeEmailKey(userEmail);
+      const ref = doc(db, 'users', key);
+      await setDoc(ref, {
+        email: userEmail,
+        tasks: newTasks,
+        events: newEvents,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.log('Firestore save error:', e);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  // ─── Load settings + Firestore data on mount ─────────────────────
   React.useEffect(() => {
-    async function loadSettings() {
+    async function init() {
       try {
         const keys = ['email','publicKey','serviceId','templateId','sendTime'];
         const pairs = await AsyncStorage.multiGet(keys);
+        let savedEmail = '';
         pairs.forEach(([key, val]) => {
           if (!val) return;
-          if (key === 'email') setEmailState(val);
+          if (key === 'email') { setEmailState(val); savedEmail = val; }
           if (key === 'publicKey') setPublicKeyState(val);
           if (key === 'serviceId') setServiceIdState(val);
           if (key === 'templateId') setTemplateIdState(val);
           if (key === 'sendTime') setSendTimeState(val);
         });
-      } catch (e) {}
+
+        if (savedEmail) {
+          const loaded = await loadFromFirestore(savedEmail);
+          if (!loaded) {
+            setTasksState(SEED_TASKS);
+            setEventsState(SEED_EVENTS);
+          }
+        } else {
+          setTasksState(SEED_TASKS);
+          setEventsState(SEED_EVENTS);
+        }
+      } catch (e) {
+        setTasksState(SEED_TASKS);
+        setEventsState(SEED_EVENTS);
+      } finally {
+        setDataLoaded(true);
+      }
     }
-    loadSettings();
+    init();
   }, []);
 
-  function setEmail(v) { setEmailState(v); AsyncStorage.setItem('email', v); }
+  // ─── Sync to Firestore whenever tasks/events change ──────────────
+  React.useEffect(() => {
+    if (!dataLoaded || !email) return;
+    saveToFirestore(email, tasks, events);
+  }, [tasks, events, dataLoaded]);
+
+  // ─── Settings setters (also re-sync when email changes) ──────────
+  function setEmail(v) {
+    setEmailState(v);
+    AsyncStorage.setItem('email', v);
+    if (v && dataLoaded) loadFromFirestore(v);
+  }
   function setPublicKey(v) { setPublicKeyState(v); AsyncStorage.setItem('publicKey', v); }
   function setServiceId(v) { setServiceIdState(v); AsyncStorage.setItem('serviceId', v); }
   function setTemplateId(v) { setTemplateIdState(v); AsyncStorage.setItem('templateId', v); }
   function setSendTime(v) { setSendTimeState(v); AsyncStorage.setItem('sendTime', v); }
+
+  // ─── Task/Event mutators ─────────────────────────────────────────
+  function setTasks(val) {
+    const next = typeof val === 'function' ? val(tasks) : val;
+    setTasksState(next);
+  }
+  function setEvents(val) {
+    const next = typeof val === 'function' ? val(events) : val;
+    setEventsState(next);
+  }
 
   function renderCalendar() {
     const first = new Date(viewYear, viewMonth, 1);
@@ -257,7 +340,11 @@ export default function App() {
       <StatusBar barStyle="dark-content" backgroundColor={C.surface} />
       <View style={s.topbar}>
         <Text style={s.logo}>🗓 DayFlow</Text>
-        <Text style={s.todayTxt}>{TODAY.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {syncing && <ActivityIndicator size="small" color={C.primary} />}
+          {syncing && <Text style={{ fontSize: 11, color: C.textMuted }}>Syncing…</Text>}
+          <Text style={s.todayTxt}>{TODAY.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
+        </View>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 80 }} keyboardShouldPersistTaps="handled">
@@ -367,6 +454,7 @@ export default function App() {
           <View style={s.tabContent}>
             <View style={s.infoBox}>
               <Text style={{ color: C.primary, fontSize: 13, lineHeight: 20 }}>
+                <Text style={{ fontWeight: '700' }}>☁️ Cloud Sync:</Text> Your tasks and events are synced to Firebase using your email as the account ID. Same email on any device restores your data.{`\n\n`}
                 <Text style={{ fontWeight: '700' }}>EmailJS Setup:</Text> Get free keys at emailjs.com → create a service + template with to_email, subject, message variables.
               </Text>
             </View>
@@ -374,7 +462,7 @@ export default function App() {
               { label: 'Public Key', val: publicKey, set: setPublicKey, ph: 'user_xxxxxxx' },
               { label: 'Service ID', val: serviceId, set: setServiceId, ph: 'service_xxxxxxx' },
               { label: 'Template ID', val: templateId, set: setTemplateId, ph: 'template_xxxxxxx' },
-              { label: 'Your Email', val: email, set: setEmail, ph: 'you@example.com' },
+              { label: 'Your Email (also syncs data)', val: email, set: setEmail, ph: 'you@example.com' },
               { label: 'Daily Send Time', val: sendTime, set: setSendTime, ph: '21:00' },
             ].map(f => (
               <View key={f.label} style={s.settingGroup}>
